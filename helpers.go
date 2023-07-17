@@ -159,6 +159,12 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 					if debug != nil && *debug {
 						log.Fatal(fmt.Sprintf("failed to decode indexed parameter %s: %s\n", argument.Name, err))
 					}
+
+					td := topicData.String()
+					if td[0:26] == "0x000000000000000000000000" {
+						params[argument.Name] = common.HexToAddress(topicData.String())
+					}
+
 				} else {
 					params[argument.Name] = value
 				}
@@ -189,7 +195,7 @@ func formatParameters(decoded map[string]interface{}, debug *bool) map[string]in
 			decoded[key] = value.String()
 
 		// For common.Address types, convert to a checksum address
-		case common.Address:
+		case *common.Address:
 			decoded[key] = value.Hex()
 
 		// For [][]uint8 types, convert to a list of hex strings
@@ -282,8 +288,6 @@ func DetectBytecodes(bytecode string, signatures []string) bool {
 			found++
 		}
 	}
-
-	fmt.Println(len(signatures), found)
 
 	return len(signatures) == found
 }
