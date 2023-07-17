@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 	"reflect"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -234,4 +235,42 @@ func formatParameters(decoded map[string]interface{}, debug *bool) map[string]in
 	}
 
 	return decoded
+}
+
+func IsToken(bytecode string) bool {
+	tr := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"[2:]
+	return strings.Contains(bytecode, tr)
+}
+
+func IsERC721(bytecode string) bool {
+	return IsToken(bytecode) && strings.Contains(bytecode, "6352211e")
+}
+
+func IsERC20(bytecode string) bool {
+	return IsToken(bytecode) && strings.Contains(bytecode, "6352211e")
+}
+
+// helper function to detect token standard.
+func detectTokenStandard(bytecode string) string {
+	if IsToken(bytecode) && IsERC721(bytecode) {
+		return "ERC721"
+	}
+
+	// Decimals + ttr
+	if IsToken(bytecode) && IsERC20(bytecode) {
+		return "ERC20"
+	}
+
+	return "UNKNOWN"
+}
+
+func DetectBytecodes(bytecode string, signatures []string) bool {
+	found := 0
+	for _, code := range signatures {
+		if strings.Contains(bytecode, code) {
+			found++
+		}
+	}
+
+	return len(signatures) == found
 }
