@@ -2,6 +2,8 @@ package decoder
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,6 +16,59 @@ var (
 	target_contract = "0xd22861049f6582BcAd6b7a33F211e6fC701DBBBB"
 	all_abis_parsed = MergeABIs(ALL_DEFAULT_ABIS...)
 )
+
+var user_abi = `
+[
+    {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "delegator",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "fromDelegate",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "toDelegate",
+        "type": "address"
+      }
+    ],
+    "name": "DelegateChanged",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "delegatee",
+        "type": "address"
+      }
+    ],
+    "name": "delegate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
+`
+
+func init() {
+	fmt.Println("initializing provider", target_provider)
+	client, err := ethclient.Dial(target_provider)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	Store.client = client
+}
 
 func TestMergeAbISs(t *testing.T) {
 	abis := MergeABIs(ALL_DEFAULT_ABIS...)
@@ -29,19 +84,14 @@ func TestAbiStore(t *testing.T) {
 
 func TestDecodeMethod(t *testing.T) {
 	txHash := common.HexToHash(target_tx_hash)
-	client, err := ethclient.Dial(target_provider)
-
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Create a new instance of the ABI decoder
 	decoder := AbiDecoder{}
 
-	// Add the ABI to the decoder
-	decoder.SetABI(all_abis_parsed)
+	// // Add the ABI to the decoder
+	decoder.SetABI(ParseABI(user_abi))
 
-	transaction, _, err := client.TransactionByHash(context.Background(), txHash)
+	transaction, _, err := Store.client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,19 +106,16 @@ func TestDecodeMethod(t *testing.T) {
 
 func TestDecodeLogs(t *testing.T) {
 	txHash := common.HexToHash(target_tx_hash)
-	client, err := ethclient.Dial(target_provider)
-
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Create a new instance of the ABI decoder
-	decoder := AbiDecoder{}
+	decoder := AbiDecoder{
+		Abi: &all_abis_parsed,
+	}
 
 	// Add the ABI to the decoder
-	decoder.FromJSON(abi_dao_token)
+	// decoder.FromJSON(abi_dao_token)
 
-	receipt, err := client.TransactionReceipt(context.Background(), txHash)
+	receipt, err := Store.client.TransactionReceipt(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,10 +132,29 @@ func TestDecodeLogs(t *testing.T) {
 }
 
 func TestIndexedDecoder(t *testing.T) {
-	Store.SetIndexed(target_contract, ParseABI(ALL_DEFAULT_ABIS[11]), true, false)
+	Store.SetIndexed(target_contract, ParseABI(ALL_DEFAULT_ABIS[11]), true, false, nil)
 	s := Store.GetIndexed(target_contract)
+	t.Logf(`bytecode: %v`, s.Bytecode)
 
 	if s.Address.Hex() != target_contract {
 		t.Fatalf("invalid result address: %s", s.Address)
 	}
+
+	decoder := s.GetDecoder()
+
+	t.Logf("Decoder contains %v methods and %v events", len(decoder.Abi.Methods), len(decoder.Abi.Events))
+	t.Logf("Decoder assigned to contract %v", *decoder.ContractAddress)
+
+	for _, sigHash := range s.GetSigHashes() {
+		t.Logf("sigHash: %v", sigHash)
+	}
+
+	for _, topic := range s.GetTopics() {
+		t.Logf("topic: %v", topic)
+	}
+
+	for _, signature := range s.GetSignatures() {
+		t.Logf("signature: %v", signature)
+	}
+
 }
