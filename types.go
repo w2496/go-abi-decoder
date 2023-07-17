@@ -103,6 +103,7 @@ func (data *DecodedMethod) GetSigHash() string {
 
 // AbiStorage is a struct for holding Ethereum ABIs.
 type AbiStorage struct {
+	IsToken  bool           `json:"isToken"`  // Current ABI is a Token
 	Verified bool           `json:"verified"` // Whether the ABI has been verified.
 	Address  common.Address `json:"address"`  // Address of the contract the ABI belongs to.
 	Abi      abi.ABI        `json:"abi"`      // The ABI.
