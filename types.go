@@ -13,10 +13,12 @@ import (
 
 // DecodedLog is a struct for holding decoded Ethereum logs.
 type DecodedLog struct {
-	Contract  string                 `json:"contract"`  // Contract address of the decoded log.
-	Topic     string                 `json:"topic"`     // Event topic hash of the decoded log.
-	Signature string                 `json:"signature"` // Event signature of the decoded log.
-	Params    map[string]interface{} `json:"params"`    // Parameters of the decoded log.
+	Contract        string                 `json:"contract"`        // Contract address of the decoded log.
+	Topic           string                 `json:"topic"`           // Event topic hash of the decoded log.
+	Signature       string                 `json:"signature"`       // Event signature of the decoded log.
+	Params          map[string]interface{} `json:"params"`          // Parameters of the decoded log.
+	TransactionHash string                 `json:"transactionHash"` // Transaction hash of the decoded log.
+	LogIndex        uint                   `json:"logIndex"`        // Index of the decoded log
 }
 
 // ToJSONBytes returns the JSON-encoded byte array of the DecodedLog object.
@@ -60,10 +62,11 @@ func (data *DecodedLog) GetSigHash() string {
 
 // DecodedMethod is a struct for holding decoded Ethereum methods.
 type DecodedMethod struct {
-	Contract  string                 `json:"contract"`  // Contract address of the decoded method.
-	SigHash   string                 `json:"sigHash"`   // Function selector hash of the decoded method.
-	Signature string                 `json:"signature"` // Function signature of the decoded method.
-	Params    map[string]interface{} `json:"params"`    // Parameters of the decoded method.
+	TransactionHash string                 `json:"transactionHash"` // Transaction hash of the decoded method.
+	Contract        string                 `json:"contract"`        // Contract address of the decoded method.
+	SigHash         string                 `json:"sigHash"`         // Function selector hash of the decoded method.
+	Signature       string                 `json:"signature"`       // Function signature of the decoded method.
+	Params          map[string]interface{} `json:"params"`          // Parameters of the decoded method.
 }
 
 // ToJSONBytes returns the JSON-encoded byte array of the DecodedMethod object.
