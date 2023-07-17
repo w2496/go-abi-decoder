@@ -90,10 +90,11 @@ func parseMethod(tx *types.Transaction, contractAbi abi.ABI, debug *bool) *Decod
 
 	// return the decoded method as a pointer to a DecodedMethod struct
 	return &DecodedMethod{
-		Contract:  contract,
-		SigHash:   sigHash,
-		Signature: method.Sig,
-		Params:    params,
+		TransactionHash: tx.Hash().Hex(),
+		Contract:        contract,
+		SigHash:         sigHash,
+		Signature:       method.Sig,
+		Params:          params,
 	}
 }
 
@@ -169,10 +170,12 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 	// Format the decoded parameters and return the DecodedLog struct.
 	params = formatParameters(params, debug)
 	return &DecodedLog{
-		Contract:  vLog.Address.Hex(),
-		Topic:     topic0.Hex(),
-		Signature: event.Sig,
-		Params:    params,
+		TransactionHash: vLog.TxHash.Hex(),
+		LogIndex:        vLog.Index,
+		Contract:        vLog.Address.Hex(),
+		Topic:           topic0.Hex(),
+		Signature:       event.Sig,
+		Params:          params,
 	}
 }
 
