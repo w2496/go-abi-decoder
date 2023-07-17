@@ -6,7 +6,7 @@ This is a simple implementation of an abi-decoder that parses methods and events
 
 To use the ABI decoder, you can import it into your Go code and use it as follows:
 
-```golang
+```go
 package main
 
 import (
