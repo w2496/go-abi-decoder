@@ -3,7 +3,6 @@ package decoder
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -162,7 +161,6 @@ func (data *AbiStorage) GetSigHashes() []string {
 
 	for _, method := range data.Abi.Methods {
 		sigHash := ToSHA3(method.Sig)
-		fmt.Println(method.Sig, sigHash)
 		result = append(result, sigHash[:10])
 	}
 
