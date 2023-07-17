@@ -8,11 +8,28 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var ALL_ABIS = MergeJsonABIs(ABI_GOVERNANCE, ABI_TIMELOCK, ABI_DAO_TOKEN, ABI_UNI_ROUTER)
+var (
+	target_provider = "https://rpc-devnet-cardano-evm.c1.milkomeda.com"
+	target_tx_hash  = "0x4f2316c83db20be4833c81f529f0eb51758ff14e4e455b4cbb203482053477f5"
+	target_contract = "0xd22861049f6582BcAd6b7a33F211e6fC701DBBBB"
+	all_abis_parsed = MergeABIs(ALL_DEFAULT_ABIS...)
+)
+
+func TestMergeAbISs(t *testing.T) {
+	abis := MergeABIs(ALL_DEFAULT_ABIS...)
+
+	t.Log("merged json")
+	t.Log("methods parsed:", len(abis.Methods))
+}
+
+func TestAbiStore(t *testing.T) {
+	Store.ParseAndAddABIs(ALL_DEFAULT_ABIS...)
+	t.Logf("%v ABIS added to Store", len(Store.AbiList))
+}
 
 func TestDecodeMethod(t *testing.T) {
-	txHash := common.HexToHash(TX_HASH)
-	client, err := ethclient.Dial(PROVIDER)
+	txHash := common.HexToHash(target_tx_hash)
+	client, err := ethclient.Dial(target_provider)
 
 	if err != nil {
 		t.Fatal(err)
@@ -22,7 +39,7 @@ func TestDecodeMethod(t *testing.T) {
 	decoder := AbiDecoder{}
 
 	// Add the ABI to the decoder
-	decoder.SetABI(ALL_ABIS)
+	decoder.SetABI(all_abis_parsed)
 
 	transaction, _, err := client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
@@ -32,11 +49,14 @@ func TestDecodeMethod(t *testing.T) {
 	// Decode a method call
 	method := decoder.DecodeMethod(transaction)
 	t.Logf("Decoded method: %s", method.Signature)
+
+	method = Store.DecodeMethod(transaction)
+	t.Logf("Decoded method (Store): %s", method.Signature)
 }
 
 func TestDecodeLogs(t *testing.T) {
-	txHash := common.HexToHash(TX_HASH)
-	client, err := ethclient.Dial(PROVIDER)
+	txHash := common.HexToHash(target_tx_hash)
+	client, err := ethclient.Dial(target_provider)
 
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +66,7 @@ func TestDecodeLogs(t *testing.T) {
 	decoder := AbiDecoder{}
 
 	// Add the ABI to the decoder
-	decoder.FromJSON(ABI_DAO_TOKEN)
+	decoder.FromJSON(abi_dao_token)
 
 	receipt, err := client.TransactionReceipt(context.Background(), txHash)
 	if err != nil {
@@ -55,19 +75,20 @@ func TestDecodeLogs(t *testing.T) {
 
 	// Decode an event
 	for _, event := range decoder.DecodeLogs(receipt.Logs) {
-		t.Logf("Decoded event: %s", event.GetSig())
+		t.Logf("Decoded event: %s - contract: %s", event.GetSig(), event.Contract)
+	}
+
+	// Decode an event using Store Decoder
+	for _, event := range Store.DecodeLogs(receipt.Logs) {
+		t.Logf("Decoded event (Store): %s - contract: %s", event.GetSig(), event.Contract)
 	}
 }
 
-func TestJSONMerge(t *testing.T) {
-	abis := MergeJsonABIs(ABI_GOVERNANCE, ABI_TIMELOCK, ABI_DAO_TOKEN, ABI_UNI_ROUTER)
+func TestIndexedDecoder(t *testing.T) {
+	Store.SetIndexed(target_contract, ParseABI(ALL_DEFAULT_ABIS[11]), true, false)
+	s := Store.GetIndexed(target_contract)
 
-	t.Log("merged json")
-
-	t.Log("methods parsed:", len(abis.Methods))
+	if s.Address.Hex() != target_contract {
+		t.Fatalf("invalid result address: %s", s.Address)
+	}
 }
-
-const (
-	PROVIDER = "https://rpc-devnet-cardano-evm.c1.milkomeda.com"
-	TX_HASH  = "0x4f2316c83db20be4833c81f529f0eb51758ff14e4e455b4cbb203482053477f5"
-)
