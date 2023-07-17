@@ -103,6 +103,8 @@ func TestDecodeMethod(t *testing.T) {
 
 	method = Store.DecodeMethod(transaction)
 	t.Logf("Decoded method (Store): %s - sigHash: %s", method.Signature, method.SigHash)
+
+	t.Logf(method.ToJSON())
 }
 
 func TestDecodeLogs(t *testing.T) {
@@ -124,11 +126,13 @@ func TestDecodeLogs(t *testing.T) {
 	// Decode an event
 	for _, event := range decoder.DecodeLogs(receipt.Logs) {
 		t.Logf("Decoded event: %s - sigHash: %s - contract: %s", event.GetSig(), event.Topic, event.Contract)
+		t.Log(event.GetParamsJSON())
 	}
 
 	// Decode an event using Store Decoder
 	for _, event := range Store.DecodeLogs(receipt.Logs) {
 		t.Logf("Decoded event (Store): %s - topic: %s - contract: %s", event.GetSig(), event.Topic, event.Contract)
+		t.Log(event.GetParamsJSON())
 	}
 }
 
