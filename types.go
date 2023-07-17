@@ -3,11 +3,11 @@ package decoder
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -158,8 +158,9 @@ func (data *AbiStorage) GetSigHashes() []string {
 	result := make([]string, 0)
 
 	for _, method := range data.Abi.Methods {
-		sigHash := crypto.Keccak256Hash([]byte(method.Sig)).String()[:10]
-		result = append(result, sigHash)
+		sigHash := ToSHA3(method.Sig)
+		fmt.Println(method.Sig, sigHash)
+		result = append(result, sigHash[:10])
 	}
 
 	return result
@@ -170,7 +171,7 @@ func (data *AbiStorage) GetTopics() []string {
 	result := make([]string, 0)
 
 	for _, event := range data.Abi.Events {
-		topic := crypto.Keccak256Hash([]byte(event.Sig)).String()
+		topic := ToSHA3(event.Sig)
 		result = append(result, topic)
 	}
 
