@@ -2,12 +2,14 @@ package decoder
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"golang.org/x/exp/slices"
 )
 
@@ -15,6 +17,7 @@ import (
 type Storage struct {
 	AbiList []abi.ABI              // global abi storage that holds all abis from `contracts` folder
 	Indexed map[string]*AbiStorage // indexed contracts are basically not thought for this application.
+	client  *ethclient.Client
 }
 
 // Store is a global variable of type Storage, holding all the ABIs and indexed contracts.
@@ -24,10 +27,10 @@ var Store = Storage{
 }
 
 // IndexedAddresses returns a slice of all the addresses of indexed contracts in Store.
-func (*Storage) IndexedAddresses() []string {
+func (store *Storage) IndexedAddresses() []string {
 	keys := make([]string, 0)
 
-	for k, _ := range Store.Indexed {
+	for k, _ := range store.Indexed {
 		keys = append(keys, k)
 	}
 
@@ -35,33 +38,43 @@ func (*Storage) IndexedAddresses() []string {
 }
 
 // GetIndexed returns the AbiStorage struct for the given address if it exists in Store.
-func (*Storage) GetIndexed(address string) *AbiStorage {
-	if Store.Indexed[address] != nil {
-		return Store.Indexed[address]
+func (store *Storage) GetIndexed(address string) *AbiStorage {
+	if store.Indexed[address] != nil {
+		return store.Indexed[address]
 	}
 	return nil
 }
 
 // SetIndexed adds the given abi to the indexed contract with the given address in Store.
-func (*Storage) SetIndexed(address string, input abi.ABI, verified bool, isToken bool) *AbiStorage {
-	Store.Indexed[address] = &AbiStorage{
+func (store *Storage) SetIndexed(address string, input abi.ABI, verified bool, isToken bool, bytecode *string) *AbiStorage {
+	store.Indexed[address] = &AbiStorage{
 		Address:  common.HexToAddress(address),
 		Abi:      input,
 		Verified: verified,
 		IsToken:  isToken,
+		Bytecode: bytecode,
+		client:   store.client,
 	}
 
-	return Store.Indexed[address]
+	if bytecode == nil && store.client != nil {
+		code, err := store.client.CodeAt(context.Background(), store.Indexed[address].Address, nil)
+		if err == nil && code != nil {
+			_bytecode := strings.Join([]string{"0x", common.Bytes2Hex(code)}, "")
+			store.Indexed[address].Bytecode = &_bytecode
+		}
+	}
+
+	return store.Indexed[address]
 }
 
 // RemoveIndexed removes the indexed contract with the given address from Store.
-func (data *Storage) RemoveIndexed(address string) {
-	delete(Store.Indexed, address)
+func (store *Storage) RemoveIndexed(address string) {
+	delete(store.Indexed, address)
 }
 
 // IsIndexed returns true if the given address exists in Store's indexed contracts.
-func (store *Storage) IsIndexed(address string) bool {
-	return slices.Contains(Store.IndexedAddresses(), address)
+func (s *Storage) IsIndexed(address string) bool {
+	return slices.Contains(s.IndexedAddresses(), address)
 }
 
 // DecodeLogs decodes an array of Ethereum logs into an array of DecodedLogs using the DecodeLog function.
@@ -89,7 +102,6 @@ func (store *Storage) DecodeLogs(vLogs []*types.Log) []*DecodedLog {
 func (store *Storage) DecodeLog(vLog *types.Log) *DecodedLog {
 	// Cache frequently-used variables to avoid overhead on every call to DecodeLog.
 	abis := store.AbiList
-
 	// Check all other ABIs.
 	for _, contractAbi := range abis {
 		abiDecoder := AbiDecoder{Abi: &contractAbi}
