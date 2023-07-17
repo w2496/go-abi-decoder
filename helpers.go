@@ -1,7 +1,6 @@
 package decoder
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"math/big"
@@ -235,34 +234,4 @@ func formatParameters(decoded map[string]interface{}, debug *bool) map[string]in
 	}
 
 	return decoded
-}
-
-func MergeJsonABIs(abis ...string) abi.ABI {
-	mergedABI := abi.ABI{
-		Methods: make(map[string]abi.Method),
-		Events:  make(map[string]abi.Event),
-	}
-
-	for _, jsonStr := range abis {
-		contractAbi, err := abi.JSON(bytes.NewReader([]byte(jsonStr)))
-		if err != nil {
-			log.Fatal("error parsing ABI: ", err)
-		}
-
-		// Merge Methods
-		for name, method := range contractAbi.Methods {
-			mergedABI.Methods[name] = method
-		}
-
-		// Merge Events
-		for name, event := range contractAbi.Events {
-			mergedABI.Events[name] = event
-		}
-
-		for name, event := range contractAbi.Events {
-			mergedABI.Events[name] = event
-		}
-	}
-
-	return mergedABI
 }
