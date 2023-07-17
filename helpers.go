@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -11,8 +12,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/exp/slices"
 )
+
+func ToSHA3(data string) string {
+	hash := crypto.Keccak256([]byte(data))
+	return "0x" + hex.EncodeToString(hash)
+
+}
 
 // parseMethod extracts the method signature and its parameters from the input data of a transaction, using
 // the provided contract ABI to decode the input data. It returns a DecodedMethod object containing the contract
@@ -267,10 +275,12 @@ func detectTokenStandard(bytecode string) string {
 func DetectBytecodes(bytecode string, signatures []string) bool {
 	found := 0
 	for _, code := range signatures {
-		if strings.Contains(bytecode, code) {
+		if strings.Contains(bytecode, strings.Replace(code, "0x", "", -1)) {
 			found++
 		}
 	}
+
+	fmt.Println(len(signatures), found)
 
 	return len(signatures) == found
 }
