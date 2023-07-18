@@ -87,7 +87,9 @@ func TestDecodeMethod(t *testing.T) {
 	txHash := common.HexToHash(target_tx_hash)
 
 	// Create a new instance of the ABI decoder
-	decoder := AbiDecoder{}
+	decoder := AbiDecoder{
+		client: Store.client,
+	}
 
 	// // Add the ABI to the decoder
 	decoder.SetABI(ParseABI(user_abi))
