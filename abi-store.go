@@ -1,9 +1,7 @@
 package decoder
 
 import (
-	"bytes"
 	"context"
-	"log"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -135,39 +133,4 @@ func (store *Storage) ParseAndAddABIs(abis ...string) {
 	for _, abi := range abis {
 		store.AbiList = append(store.AbiList, ParseABI(abi))
 	}
-}
-
-func ParseABI(input string) abi.ABI {
-	contractAbi, err := abi.JSON(strings.NewReader(input))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return contractAbi
-}
-
-func MergeABIs(abis ...string) abi.ABI {
-	mergedABI := abi.ABI{
-		Methods: make(map[string]abi.Method),
-		Events:  make(map[string]abi.Event),
-	}
-
-	for _, jsonStr := range abis {
-		contractAbi, err := abi.JSON(bytes.NewReader([]byte(jsonStr)))
-		if err != nil {
-			log.Fatal("error parsing ABI: ", err)
-		}
-
-		// Merge Methods
-		for name, method := range contractAbi.Methods {
-			mergedABI.Methods[name] = method
-		}
-
-		// Merge Events
-		for name, event := range contractAbi.Events {
-			mergedABI.Events[name] = event
-		}
-	}
-
-	return mergedABI
 }
