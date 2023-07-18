@@ -1,26 +1,17 @@
 package decoder
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
 	"reflect"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/exp/slices"
 )
-
-func ToSHA3(data string) string {
-	hash := crypto.Keccak256([]byte(data))
-	return "0x" + hex.EncodeToString(hash)
-
-}
 
 // parseMethod extracts the method signature and its parameters from the input data of a transaction, using
 // the provided contract ABI to decode the input data. It returns a DecodedMethod object containing the contract
@@ -252,43 +243,4 @@ func formatParameters(decoded map[string]interface{}, debug *bool) map[string]in
 	}
 
 	return decoded
-}
-
-func IsToken(bytecode string) bool {
-	tr := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"[2:]
-	return strings.Contains(bytecode, tr)
-}
-
-func IsERC721(bytecode string) bool {
-	return IsToken(bytecode) && strings.Contains(bytecode, "6352211e")
-}
-
-func IsERC20(bytecode string) bool {
-	return IsToken(bytecode) && strings.Contains(bytecode, "6352211e")
-}
-
-// helper function to detect token standard.
-func detectTokenStandard(bytecode string) string {
-	if IsToken(bytecode) && IsERC721(bytecode) {
-		return "ERC721"
-	}
-
-	// Decimals + ttr
-	if IsToken(bytecode) && IsERC20(bytecode) {
-		return "ERC20"
-	}
-
-	return "UNKNOWN"
-}
-
-func DetectBytecodes(bytecode string, signatures []string) bool {
-	found := 0
-	for _, code := range signatures {
-		term := strings.Replace(code, "0x", "", -1)
-		if strings.Contains(bytecode, term) {
-			found++
-		}
-	}
-
-	return len(signatures) == found
 }
