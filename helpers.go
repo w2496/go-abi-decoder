@@ -284,7 +284,8 @@ func detectTokenStandard(bytecode string) string {
 func DetectBytecodes(bytecode string, signatures []string) bool {
 	found := 0
 	for _, code := range signatures {
-		if strings.Contains(bytecode, strings.Replace(code, "0x", "", -1)) {
+		term := strings.Replace(code, "0x", "", -1)
+		if strings.Contains(bytecode, term) {
 			found++
 		}
 	}
