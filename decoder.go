@@ -1,19 +1,25 @@
 package decoder
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // AbiDecoder is a struct used to decode contract ABIs.
 type AbiDecoder struct {
-	IsVerified      bool     // Indicates whether the contract is verified
-	ContractAddress *string  // The contract's address
-	Abi             *abi.ABI // The contract's ABI
-	Debug           *bool    // Whether debugging is enabled
+	IsVerified      bool              // Indicates whether the contract is verified
+	ContractAddress *string           // The contract's address
+	Abi             *abi.ABI          // The contract's ABI
+	Debug           *bool             // Whether debugging is enabled
+	client          *ethclient.Client // The client instance for decoder
 }
 
 // checkAbi checks if the ABI has been loaded into the decoder instance.
@@ -82,4 +88,45 @@ func (decoder *AbiDecoder) DecodeMethod(tx *types.Transaction) *DecodedMethod {
 
 	// Parse the method
 	return parseMethod(tx, *decoder.Abi, decoder.Debug)
+}
+
+func (decoder *AbiDecoder) SetClient(client *ethclient.Client) {
+	decoder.client = client
+}
+
+func (decoder *AbiDecoder) Reset() {
+	decoder.client = nil
+	decoder.Abi = nil
+	decoder.ContractAddress = nil
+	decoder.Debug = nil
+}
+
+func (decoder *AbiDecoder) FilterEvents(filter ethereum.FilterQuery) string {
+	if decoder.client == nil {
+		panic("no provider set")
+	}
+
+	logs, err := decoder.client.FilterLogs(context.Background(), filter)
+	if err != nil {
+		panic(err)
+	}
+
+	events := make([]DecodedLog, 0)
+	for _, log := range logs {
+		decoded := decoder.DecodeLog(&log)
+
+		if decoded != nil {
+			events = append(events, *decoded)
+		}
+	}
+
+	fmt.Printf("logs: %v - events parsed: %v\n", len(logs), len(events))
+
+	res, err := json.Marshal(events)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return string(res)
 }
