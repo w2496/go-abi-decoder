@@ -42,6 +42,11 @@ func (decoder *AbiDecoder) FromJSON(abis string) abi.ABI {
 	return *decoder.Abi
 }
 
+func (s *AbiDecoder) MergeAddABIs(abis ...string) abi.ABI {
+	*s.Abi = MergeABIs(abis...)
+	return *s.Abi
+}
+
 // DecodeLog decodes the log and returns the decoded log.
 // It checks if the ABI has been loaded in the decoder instance.
 func (decoder *AbiDecoder) DecodeLog(vLog *types.Log) *DecodedLog {
