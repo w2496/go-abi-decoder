@@ -152,6 +152,7 @@ func (data *AbiStorage) GetDecoder() AbiDecoder {
 		ContractAddress: &contractAddress,
 		Abi:             &data.Abi,
 		IsVerified:      data.Verified,
+		client:          data.client,
 	}
 }
 
