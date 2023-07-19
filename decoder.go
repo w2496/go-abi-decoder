@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -94,6 +95,14 @@ func (decoder *AbiDecoder) SetClient(client *ethclient.Client) {
 	decoder.client = client
 }
 
+func (decoder *AbiDecoder) GetClient() *ethclient.Client {
+	return decoder.client
+}
+
+func (decoder *AbiDecoder) RemoveClient() {
+	decoder.client = nil
+}
+
 func (decoder *AbiDecoder) Reset() {
 	decoder.client = nil
 	decoder.Abi = nil
@@ -101,14 +110,14 @@ func (decoder *AbiDecoder) Reset() {
 	decoder.Debug = nil
 }
 
-func (decoder *AbiDecoder) FilterEvents(filter ethereum.FilterQuery) string {
+func (decoder *AbiDecoder) ScanLogs(filter ethereum.FilterQuery) ([]byte, error) {
 	if decoder.client == nil {
-		panic("no provider set")
+		return []byte{}, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
 	}
 
 	logs, err := decoder.client.FilterLogs(context.Background(), filter)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
 	events := make([]DecodedLog, 0)
@@ -120,13 +129,26 @@ func (decoder *AbiDecoder) FilterEvents(filter ethereum.FilterQuery) string {
 		}
 	}
 
-	fmt.Printf("logs: %v - events parsed: %v\n", len(logs), len(events))
-
 	res, err := json.Marshal(events)
-
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 
-	return string(res)
+	return res, nil
+}
+
+func (decoder *AbiDecoder) ScanTransaction(transactionHash string) ([]byte, error) {
+	if decoder.client == nil {
+		return []byte{}, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
+	}
+
+	hash := common.HexToHash(transactionHash)
+	transaction, _, err := decoder.client.TransactionByHash(context.Background(), hash)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	method := decoder.DecodeMethod(transaction)
+
+	return method.ToJSONBytes(), nil
 }
