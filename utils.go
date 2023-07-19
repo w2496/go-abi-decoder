@@ -32,7 +32,7 @@ func MergeABIs(abis ...string) abi.ABI {
 	for _, jsonStr := range abis {
 		contractAbi, err := abi.JSON(bytes.NewReader([]byte(jsonStr)))
 		if err != nil {
-			log.Fatal("error parsing ABI: ", err)
+			log.Fatal("decoder.MergeABIs: error parsing ABI: ", err)
 		}
 
 		// Merge Methods
