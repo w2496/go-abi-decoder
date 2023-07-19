@@ -10,6 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+const (
+	ether_address = "0x0000000000000000000000000000000000000000"
+)
+
 func ParseABI(input string) abi.ABI {
 	contractAbi, err := abi.JSON(strings.NewReader(input))
 	if err != nil {
