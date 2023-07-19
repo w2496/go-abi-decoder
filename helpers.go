@@ -86,8 +86,8 @@ func parseMethod(tx *types.Transaction, contractAbi abi.ABI, debug *bool) *Decod
 	return &DecodedMethod{
 		TransactionHash: tx.Hash().Hex(),
 		Contract:        contract,
-		SigHash:         sigHash,
-		Signature:       "0x" + method.Sig,
+		SigHash:         "0x" + sigHash,
+		Signature:       method.Sig,
 		Params:          params,
 	}
 }
