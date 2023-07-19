@@ -1,9 +1,6 @@
 package decoder
 
 import (
-	"context"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -14,14 +11,14 @@ import (
 // Storage is a struct that holds all the ABIs and indexed contracts.
 type Storage struct {
 	AbiList []abi.ABI              // global abi storage that holds all abis from `contracts` folder
-	Indexed map[string]*AbiStorage // indexed contracts are basically not thought for this application.
+	Indexed map[string]*IndexedABI // indexed contracts are basically not thought for this application.
 	client  *ethclient.Client
 }
 
 // Store is a global variable of type Storage, holding all the ABIs and indexed contracts.
 var Store = Storage{
 	AbiList: make([]abi.ABI, 0),
-	Indexed: make(map[string]*AbiStorage),
+	Indexed: make(map[string]*IndexedABI),
 }
 
 // IndexedAddresses returns a slice of all the addresses of indexed contracts in Store.
@@ -35,8 +32,8 @@ func (store *Storage) IndexedAddresses() []string {
 	return keys
 }
 
-// GetIndexed returns the AbiStorage struct for the given address if it exists in Store.
-func (store *Storage) GetIndexed(address string) *AbiStorage {
+// GetIndexed returns the IndexedABI struct for the given address if it exists in Store.
+func (store *Storage) GetIndexed(address string) *IndexedABI {
 	if store.Indexed[address] != nil {
 		return store.Indexed[address]
 	}
@@ -44,8 +41,9 @@ func (store *Storage) GetIndexed(address string) *AbiStorage {
 }
 
 // SetIndexed adds the given abi to the indexed contract with the given address in Store.
-func (store *Storage) SetIndexed(address string, input abi.ABI, verified bool, isToken bool, bytecode *string) *AbiStorage {
-	store.Indexed[address] = &AbiStorage{
+func (store *Storage) SetIndexed(address string, input abi.ABI, verified bool, isToken bool, bytecode *string) *IndexedABI {
+
+	result := IndexedABI{
 		Address:  common.HexToAddress(address),
 		Abi:      input,
 		Verified: verified,
@@ -55,12 +53,19 @@ func (store *Storage) SetIndexed(address string, input abi.ABI, verified bool, i
 	}
 
 	if bytecode == nil && store.client != nil {
-		code, err := store.client.CodeAt(context.Background(), store.Indexed[address].Address, nil)
-		if err == nil && code != nil {
-			_bytecode := strings.Join([]string{"0x", common.Bytes2Hex(code)}, "")
-			store.Indexed[address].Bytecode = &_bytecode
+		result.Bytecode = getBytecode(store.client, common.HexToAddress(address))
+	}
+
+	if bytecode != nil {
+		result.IsToken = IsToken(*bytecode)
+		if result.IsToken {
+			if IsERC721(*bytecode) {
+				*result.IsERC721 = true
+			}
 		}
 	}
+
+	store.Indexed[address] = &result
 
 	return store.Indexed[address]
 }
