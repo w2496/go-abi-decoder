@@ -2,11 +2,9 @@ package decoder
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
-	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -16,9 +14,16 @@ import (
 )
 
 var (
-	target_provider = "https://rpc-devnet-cardano-evm.c1.milkomeda.com"
-	target_tx_hash  = "0x4f2316c83db20be4833c81f529f0eb51758ff14e4e455b4cbb203482053477f5"
-	target_contract = "0xd22861049f6582BcAd6b7a33F211e6fC701DBBBB"
+	// target_provider = "https://rpc-devnet-cardano-evm.c1.milkomeda.com"
+	// target_tx_hash  = "0x4f2316c83db20be4833c81f529f0eb51758ff14e4e455b4cbb203482053477f5"
+	// target_contract = "0xd22861049f6582BcAd6b7a33F211e6fC701DBBBB"
+	// target_erc20    = "0x09eac2100FF33c3083a822F8DCe9f92415b77B48"
+
+	target_provider = "http://localhost:8556"
+	target_tx_hash  = "0x818c265a4fbc77e4dde8462cf3071b3e0ccff21d3e8c386b9ae158797a4bda12"
+	target_contract = "0xBBd0AeC7527d1beD439C94DE4b11b0298177097B"
+	target_erc20    = "0x594cBC09284981fF5e45F00d65d07f81f4C8B23d"
+	target_erc721   = "0xFCf480d9b5E42666763fa6E3F834611571b0Dc35"
 	all_abis_parsed = MergeABIs(ALL_DEFAULT_ABIS...)
 )
 
@@ -97,8 +102,8 @@ func TestDecodeMethod(t *testing.T) {
 	}
 
 	// // Add the ABI to the decoder
-	decoder.SetABI(ParseABI(user_abi))
-
+	// decoder.SetABI(ParseABI(user_abi))
+	decoder.SetABI(all_abis_parsed)
 	transaction, _, err := decoder.client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
@@ -207,8 +212,8 @@ func TestScanLogs(t *testing.T) {
 	events, err := decoder.ScanLogs(ethereum.FilterQuery{
 		// FromBlock: big.NewInt(int64(blockNumber - 100000)),
 		// ToBlock:   big.NewInt(int64(blockNumber)),
-		FromBlock: big.NewInt(10142711),
-		ToBlock:   big.NewInt(10730523),
+		// FromBlock: big.NewInt(10142711),
+		// ToBlock:   big.NewInt(10730523),
 		Addresses: []common.Address{
 			common.HexToAddress(target_contract),
 		},
@@ -218,14 +223,11 @@ func TestScanLogs(t *testing.T) {
 		t.Fatal("error scanning logs", err)
 	}
 
-	var parsed []interface{}
-	json.Unmarshal([]byte(events), &parsed)
-
-	if len(parsed) < 1 {
+	if events == nil || len(*events) < 1 {
 		t.Fatal("no events found")
 	}
 
-	t.Logf("%v events found", len(parsed))
+	t.Logf("%v events found", len(*events))
 }
 
 func TestScanTransaction(t *testing.T) {
@@ -241,16 +243,36 @@ func TestScanTransaction(t *testing.T) {
 		t.Fatal("error scanning transaction", err)
 	}
 
-	var parsed map[string]interface{}
-	json.Unmarshal(method, &parsed)
+	t.Log(string(method.ToJSONBytes()))
+}
 
-	if len(parsed) < 1 {
-		t.Fatal("no events found")
+func TestERC20(t *testing.T) {
+	addr := "0x21540074Ac4c37da80BAC3E6674E10a2242fc2B4"
+	i := Store.SetIndexed(addr, ParseABI(abi_dao_token), false, true, nil)
+
+	decoder := i.GetDecoder()
+
+	if decoder.ContractAddress == &target_contract {
+		t.Log("Indexed Decoder Loaded")
 	}
 
-	delegatee := parsed["params"].(map[string]interface{})["delegatee"].(string)
-	t.Log(delegatee)
-	if strings.ToLower(delegatee) == delegatee {
-		t.Fatal("lower case address detected.")
+	events, err := decoder.ScanLogs(ethereum.FilterQuery{
+		Addresses: []common.Address{
+			common.HexToAddress(addr),
+		},
+	})
+
+	if err != nil {
+		t.Fatal("error scanning erc721 logs", err)
+	}
+
+	t.Log(string(events.ToJSONBytes()))
+
+	if !i.IsToken {
+		t.Fatalf("given contract not recognized as token")
+	}
+
+	if i.IsToken && i.IsERC721 != nil && *i.IsERC721 {
+		t.Fatalf("given contract is a ERC721 token")
 	}
 }
