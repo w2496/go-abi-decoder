@@ -134,3 +134,15 @@ func (store *Storage) ParseAndAddABIs(abis ...string) {
 		store.AbiList = append(store.AbiList, ParseABI(abi))
 	}
 }
+
+func (store *Storage) SetClient(client *ethclient.Client) {
+	store.client = client
+}
+
+func (store *Storage) GetClient() *ethclient.Client {
+	return store.client
+}
+
+func (store *Storage) RemoveClient() {
+	store.client = nil
+}
