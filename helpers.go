@@ -1,15 +1,18 @@
 package decoder
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
 	"reflect"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"golang.org/x/exp/slices"
 )
 
@@ -84,7 +87,7 @@ func parseMethod(tx *types.Transaction, contractAbi abi.ABI, debug *bool) *Decod
 		TransactionHash: tx.Hash().Hex(),
 		Contract:        contract,
 		SigHash:         sigHash,
-		Signature:       method.Sig,
+		Signature:       "0x" + method.Sig,
 		Params:          params,
 	}
 }
@@ -102,7 +105,7 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 
 	// Get the event corresponding to the signature hash.
 	topic0 := vLog.Topics[0]
-	params := make(map[string]interface{})
+	params := Params{}
 	event, err := contractAbi.EventByID(vLog.Topics[0])
 	if err != nil {
 		return nil
@@ -121,6 +124,7 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 		}
 		if !slices.Contains(skip, event.Name) {
 			if hexutil.Encode(vLog.Data) != "0x" {
+				fmt.Println("ERROR UNPACK LOG DATA", err, event.Name)
 				return nil
 			}
 		} else {
@@ -248,4 +252,16 @@ func formatParameters(decoded map[string]interface{}, debug *bool) Params {
 	}
 
 	return decoded
+}
+
+func getBytecode(client *ethclient.Client, address common.Address) *string {
+	code, err := client.CodeAt(context.Background(), address, nil)
+	if err != nil {
+		log.Fatal("error getting bytecode:", address, err)
+		zeroHex := "0x"
+		return &zeroHex
+	}
+
+	res := strings.Join([]string{"0x", common.Bytes2Hex(code)}, "")
+	return &res
 }
