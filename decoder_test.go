@@ -2,10 +2,14 @@ package decoder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"golang.org/x/exp/maps"
@@ -68,7 +72,8 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	Store.client = client
+
+	Store.SetClient(client)
 }
 
 func TestMergeAbISs(t *testing.T) {
@@ -88,13 +93,13 @@ func TestDecodeMethod(t *testing.T) {
 
 	// Create a new instance of the ABI decoder
 	decoder := AbiDecoder{
-		client: Store.client,
+		client: Store.GetClient(),
 	}
 
 	// // Add the ABI to the decoder
 	decoder.SetABI(ParseABI(user_abi))
 
-	transaction, _, err := Store.client.TransactionByHash(context.Background(), txHash)
+	transaction, _, err := decoder.client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,13 +119,14 @@ func TestDecodeLogs(t *testing.T) {
 
 	// Create a new instance of the ABI decoder
 	decoder := AbiDecoder{
-		Abi: &all_abis_parsed,
+		Abi:    &all_abis_parsed,
+		client: Store.GetClient(),
 	}
 
 	// Add the ABI to the decoder
 	// decoder.FromJSON(abi_dao_token)
 
-	receipt, err := Store.client.TransactionReceipt(context.Background(), txHash)
+	receipt, err := decoder.client.TransactionReceipt(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,5 +183,74 @@ func TestSHA3(t *testing.T) {
 	hash := ToSHA3("DelegateChanged(address,address,address)")
 	if hash != "0x3134e8a2e6d97e929a7e54011ea5485d7d196dd5f0ba4d4ef95803e8e3fc257f" {
 		t.Fatalf("solidity returned incorrect hash: %v", hash)
+	}
+}
+
+func TestScanLogs(t *testing.T) {
+	decoder := AbiDecoder{
+		Abi:             &all_abis_parsed,
+		ContractAddress: &target_contract,
+	}
+
+	decoder.SetClient(Store.client)
+
+	blockNumber, err := decoder.client.BlockNumber(context.Background())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if big.NewInt(int64(blockNumber)).Uint64() <= 0 {
+		t.Fatal("error getting block number")
+	}
+
+	events, err := decoder.ScanLogs(ethereum.FilterQuery{
+		// FromBlock: big.NewInt(int64(blockNumber - 100000)),
+		// ToBlock:   big.NewInt(int64(blockNumber)),
+		FromBlock: big.NewInt(10142711),
+		ToBlock:   big.NewInt(10730523),
+		Addresses: []common.Address{
+			common.HexToAddress(target_contract),
+		},
+	})
+
+	if err != nil {
+		t.Fatal("error scanning logs", err)
+	}
+
+	var parsed []interface{}
+	json.Unmarshal([]byte(events), &parsed)
+
+	if len(parsed) < 1 {
+		t.Fatal("no events found")
+	}
+
+	t.Logf("%v events found", len(parsed))
+}
+
+func TestScanTransaction(t *testing.T) {
+	decoder := AbiDecoder{
+		Abi:             &all_abis_parsed,
+		ContractAddress: &target_contract,
+	}
+
+	decoder.SetClient(Store.client)
+
+	method, err := decoder.ScanTransaction(target_tx_hash)
+	if err != nil {
+		t.Fatal("error scanning transaction", err)
+	}
+
+	var parsed map[string]interface{}
+	json.Unmarshal(method, &parsed)
+
+	if len(parsed) < 1 {
+		t.Fatal("no events found")
+	}
+
+	delegatee := parsed["params"].(map[string]interface{})["delegatee"].(string)
+	t.Log(delegatee)
+	if strings.ToLower(delegatee) == delegatee {
+		t.Fatal("lower case address detected.")
 	}
 }
