@@ -70,7 +70,7 @@ func parseMethod(tx *types.Transaction, contractAbi abi.ABI, debug *bool) *Decod
 	if tx.To() != nil {
 		contract = tx.To().Hex()
 	} else { // otherwise set it to a default address and log a warning if debug is enabled
-		contract = "0x0000000000000000000000000000000000000000"
+		contract = ether_address
 		if debug != nil && *debug {
 			log.Fatal(`decoder: no tx.to in transaction:`, tx.Hash().String())
 		}
@@ -153,7 +153,10 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 
 					td := topicData.String()
 					if td[0:26] == "0x000000000000000000000000" {
-						params[argument.Name] = common.HexToAddress(topicData.String())
+						params[argument.Name] = common.HexToAddress(topicData.String()).Hex()
+						if debug != nil && *debug {
+							fmt.Printf(`key: %v - value: %v\n`, argument.Name, params[argument.Name])
+						}
 					}
 
 				} else {
@@ -167,6 +170,7 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 	// Format the decoded parameters and return the DecodedLog struct.
 	params = formatParameters(params, debug)
 	return &DecodedLog{
+		BlockNumber:     vLog.BlockNumber,
 		TransactionHash: vLog.TxHash.Hex(),
 		LogIndex:        vLog.Index,
 		Contract:        vLog.Address.Hex(),
@@ -178,7 +182,7 @@ func parseLog(vLog *types.Log, contractAbi abi.ABI, debug *bool) *DecodedLog {
 
 // formatParameters will iterate through objects and will parse big.Int to string.
 // it will also parse addresses and return them as checksum addresses.
-func formatParameters(decoded map[string]interface{}, debug *bool) map[string]interface{} {
+func formatParameters(decoded map[string]interface{}, debug *bool) Params {
 	for key, value := range decoded {
 		switch value := value.(type) {
 		// For *big.Int types, parse the value to string
@@ -212,15 +216,16 @@ func formatParameters(decoded map[string]interface{}, debug *bool) map[string]in
 				parsed = append(parsed, address.Hex())
 			}
 			decoded[key] = parsed
-
 		// For []uint8 types, convert to a hex string
 		case []uint8:
 			decoded[key] = "0x" + common.Bytes2Hex(value)
-
-		// For strings, booleans, and uint8 types, no parsing necessary
-		case string, bool, uint8:
-			// do nothing
-
+		// for strings we check for address and checksum it
+		case string:
+			if value != ether_address && common.IsHexAddress(value) {
+				decoded[key] = common.HexToAddress(value).Hex()
+			}
+		// For booleans, and uint8 types, no parsing necessary
+		case bool, uint8:
 		// For [32]uint8 types, convert to a checksum address
 		case [32]uint8:
 			ba := make([]byte, 0, 32)
