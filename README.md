@@ -71,19 +71,13 @@ import (
 	kdx "github.com/w2496/go-abi-decoder"
 )
 
-var client *ethclient.Client
-
-func init() {
-	_client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com")
+func main() {
+	client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com")
 
 	if err != nil {
 		panic(err)
 	}
 
-	client = _client
-}
-
-func main() {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
