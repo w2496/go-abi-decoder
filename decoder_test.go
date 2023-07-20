@@ -209,7 +209,7 @@ func TestScanLogs(t *testing.T) {
 		t.Fatal("error getting block number")
 	}
 
-	events, err := decoder.ScanLogs(ethereum.FilterQuery{
+	events, err := decoder.FilterLogEvents(ethereum.FilterQuery{
 		// FromBlock: big.NewInt(int64(blockNumber - 100000)),
 		// ToBlock:   big.NewInt(int64(blockNumber)),
 		// FromBlock: big.NewInt(10142711),
@@ -238,7 +238,7 @@ func TestScanTransaction(t *testing.T) {
 
 	decoder.SetClient(Store.client)
 
-	method, err := decoder.ScanTransaction(target_tx_hash)
+	method, err := decoder.DecodeTransaction(target_tx_hash)
 	if err != nil {
 		t.Fatal("error scanning transaction", err)
 	}
@@ -256,7 +256,7 @@ func TestERC20(t *testing.T) {
 		t.Log("Indexed Decoder Loaded")
 	}
 
-	events, err := decoder.ScanLogs(ethereum.FilterQuery{
+	events, err := decoder.FilterLogEvents(ethereum.FilterQuery{
 		Addresses: []common.Address{
 			common.HexToAddress(addr),
 		},
