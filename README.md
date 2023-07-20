@@ -67,19 +67,25 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	// Import the abi-decoder package
+	// Import the abi-decoder package (0.0.11)
 	kdx "github.com/w2496/go-abi-decoder"
 )
 
-func main() {
-	client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com")
+var client *ethclient.Client
+
+func init() {
+	_client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com")
 
 	if err != nil {
 		panic(err)
 	}
 
+	client = _client
+}
+
+func main() {
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	abis := kdx.MergeABIs(kdx.ALL_DEFAULT_ABIS...)
 	decoder := kdx.AbiDecoder{Abi: &abis}
@@ -91,7 +97,7 @@ func main() {
 		addresses := make([]common.Address, 0)
 		addresses = append(addresses, common.HexToAddress(address))
 
-		events, err := decoder.ScanLogs(ethereum.FilterQuery{
+		events, err := decoder.FilterLogEvents(ethereum.FilterQuery{
 			Addresses: addresses,
 		})
 
@@ -105,7 +111,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		hash := "0x10ad8530cdad3cf34c765ee728e6cd9cef6bf311bdeb2ed0c7dbe8a32d7a0aa8"
-		method, err := decoder.ScanTransaction(hash)
+		method, err := decoder.DecodeTransaction(hash)
 		if err != nil {
 			panic(err)
 		}
@@ -113,6 +119,16 @@ func main() {
 		fmt.Println(string(method.ToJSON()))
 	}()
 
+	go func() {
+		defer wg.Done()
+		hash := "0x10ad8530cdad3cf34c765ee728e6cd9cef6bf311bdeb2ed0c7dbe8a32d7a0aa8"
+		events, err := decoder.DecodeReceipt(hash)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(string(events.ToJSON()))
+	}()
 	wg.Wait()
 }
 ```
