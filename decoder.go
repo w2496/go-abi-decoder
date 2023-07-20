@@ -109,7 +109,7 @@ func (decoder *AbiDecoder) Reset() {
 	decoder.Debug = nil
 }
 
-func (decoder *AbiDecoder) ScanLogs(filter ethereum.FilterQuery) (*ScannedLogs, error) {
+func (decoder *AbiDecoder) FilterLogEvents(filter ethereum.FilterQuery) (*ScannedLogs, error) {
 	if decoder.client == nil {
 		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
 	}
@@ -131,7 +131,31 @@ func (decoder *AbiDecoder) ScanLogs(filter ethereum.FilterQuery) (*ScannedLogs, 
 	return &events, nil
 }
 
-func (decoder *AbiDecoder) ScanTransaction(transactionHash string) (*DecodedMethod, error) {
+func (decoder *AbiDecoder) DecodeReceipt(transactionHash string) (*ScannedLogs, error) {
+	if decoder.client == nil {
+		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
+	}
+
+	receipt, err := decoder.client.TransactionReceipt(context.Background(), common.HexToHash(transactionHash))
+	if err != nil {
+		return nil, err
+	}
+
+	events := make(ScannedLogs, 0)
+	if receipt.Logs != nil && len(receipt.Logs) > 0 {
+		for _, log := range receipt.Logs {
+			decoded := decoder.DecodeLog(log)
+
+			if decoded != nil {
+				events = append(events, *decoded)
+			}
+		}
+	}
+
+	return &events, nil
+}
+
+func (decoder *AbiDecoder) DecodeTransaction(transactionHash string) (*DecodedMethod, error) {
 	if decoder.client == nil {
 		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
 	}
