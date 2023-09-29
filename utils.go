@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -83,13 +84,22 @@ func DetectTokenStandard(bytecode string) string {
 }
 
 func DetectBytecodes(bytecode string, signatures []string) bool {
+	// Sort the signatures by string length
+	sort.Slice(signatures, func(i, j int) bool {
+		return len(signatures[i]) < len(signatures[j])
+	})
+
+	remainingBytecode := bytecode // Make a copy of the original bytecode
 	found := 0
+
 	for _, code := range signatures {
-		term := strings.Replace(code, "0x", "", -1)
-		if strings.Contains(bytecode, term) {
+		if strings.Contains(remainingBytecode, code) {
+			// Remove the found code from the remaining bytecode
+			remainingBytecode = strings.Replace(remainingBytecode, code, "", 1)
 			found++
 		}
 	}
 
+	// If all signatures were found without collisions and count matches, return true
 	return len(signatures) == found
 }
