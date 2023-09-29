@@ -3,6 +3,7 @@ package decoder
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -69,6 +70,10 @@ func (data *IndexedABI) GetSigHashes() []string {
 		result = append(result, sigHash[:10])
 	}
 
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i]) < len(result[j])
+	})
+
 	return result
 }
 
@@ -80,6 +85,10 @@ func (data *IndexedABI) GetTopics() []string {
 		topic := ToSHA3(event.Sig)
 		result = append(result, topic)
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i]) < len(result[j])
+	})
 
 	return result
 }
@@ -95,6 +104,10 @@ func (data *IndexedABI) GetSignatures() []string {
 	for _, method := range data.Abi.Methods {
 		result = append(result, method.Sig)
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i]) < len(result[j])
+	})
 
 	return result
 }
