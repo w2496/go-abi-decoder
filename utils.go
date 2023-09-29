@@ -83,6 +83,28 @@ func DetectTokenStandard(bytecode string) string {
 	return "UNKNOWN"
 }
 
+// detectBytecodes checks if a given bytecode string contains a set of signatures.
+//
+// This function takes a bytecode string and a list of signatures as input. It
+// checks if each signature, after optionally removing the "0x" prefix, can be
+// found within the bytecode string. The function ensures that all signatures
+// are found in the bytecode without collisions and that the count of found
+// signatures matches the total count of signatures.
+//
+// Parameters:
+// - bytecode: The bytecode string to search for signatures.
+// - signatures: A list of hex signatures to check for within the bytecode.
+//
+// Returns:
+//   - true if all signatures are found without collisions and the count matches,
+//     otherwise false.
+//
+// Example Usage:
+//
+//	bytecode := "0x0123456789abcdef"
+//	signatures := []string{"0x01", "0x23", "0x45"}
+//	result := detectBytecodes(bytecode, signatures)
+//	// result will be true if all signatures are found without collisions.
 func DetectBytecodes(bytecode string, signatures []string) bool {
 	// Sort the signatures by string length
 	sort.Slice(signatures, func(i, j int) bool {
@@ -93,6 +115,8 @@ func DetectBytecodes(bytecode string, signatures []string) bool {
 	found := 0
 
 	for _, code := range signatures {
+		code = strings.TrimPrefix(code, "0x") // Remove "0x" prefix if it exists
+
 		if strings.Contains(remainingBytecode, code) {
 			// Remove the found code from the remaining bytecode
 			remainingBytecode = strings.Replace(remainingBytecode, code, "", 1)
