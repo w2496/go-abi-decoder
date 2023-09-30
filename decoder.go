@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -168,4 +169,36 @@ func (decoder *AbiDecoder) DecodeTransaction(transactionHash string) (*DecodedMe
 
 	method := decoder.DecodeMethod(transaction)
 	return method, nil
+}
+
+// gets all signature hashes of given IndexedABI
+func (d *AbiDecoder) GetSigHashes() []string {
+	result := make([]string, 0)
+
+	for _, method := range d.Abi.Methods {
+		sigHash := ToSHA3(method.Sig)
+		result = append(result, sigHash[:10])
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i]) < len(result[j])
+	})
+
+	return result
+}
+
+// gets all signature hashes of given IndexedABI
+func (d *AbiDecoder) GetTopics() []string {
+	result := make([]string, 0)
+
+	for _, event := range d.Abi.Events {
+		topic := ToSHA3(event.Sig)
+		result = append(result, topic)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i]) < len(result[j])
+	})
+
+	return result
 }
