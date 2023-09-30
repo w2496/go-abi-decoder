@@ -73,7 +73,7 @@ func parseMethod(tx *types.Transaction, contractAbi abi.ABI, debug *bool) *Decod
 	if tx.To() != nil {
 		contract = tx.To().Hex()
 	} else { // otherwise set it to a default address and log a warning if debug is enabled
-		contract = ether_address
+		contract = EtherAddress
 		if debug != nil && *debug {
 			log.Fatal(`decoder: no tx.to in transaction:`, tx.Hash().String())
 		}
@@ -225,7 +225,7 @@ func formatParameters(decoded map[string]interface{}, debug *bool) Params {
 			decoded[key] = "0x" + common.Bytes2Hex(value)
 		// for strings we check for address and checksum it
 		case string:
-			if value != ether_address && common.IsHexAddress(value) {
+			if value != EtherAddress && common.IsHexAddress(value) {
 				decoded[key] = common.HexToAddress(value).Hex()
 			}
 		// For booleans, and uint8 types, no parsing necessary
