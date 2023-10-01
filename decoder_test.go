@@ -197,8 +197,6 @@ func TestScanLogs(t *testing.T) {
 		ContractAddress: &target_contract,
 	}
 
-	decoder.SetClient(Store.client)
-
 	blockNumber, err := decoder.client.BlockNumber(context.Background())
 
 	if err != nil {
@@ -235,8 +233,6 @@ func TestScanTransaction(t *testing.T) {
 		Abi:             &all_abis_parsed,
 		ContractAddress: &target_contract,
 	}
-
-	decoder.SetClient(Store.client)
 
 	method, err := decoder.DecodeTransaction(target_tx_hash)
 	if err != nil {
