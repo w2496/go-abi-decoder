@@ -134,7 +134,7 @@ func (store *Storage) DecodeMethod(tx *types.Transaction) *DecodedMethod {
 
 func (store *Storage) ParseAndAddABIs(abis ...string) {
 	for _, abi := range abis {
-		store.AbiList = append(store.AbiList, ParseABI(abi))
+		store.AbiList = append(store.AbiList, *ParseABI(abi))
 	}
 }
 
