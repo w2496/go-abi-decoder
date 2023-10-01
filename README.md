@@ -21,20 +21,6 @@ import (
 )
 
 func main() {
-package main
-
-import (
-	"context"
-	"fmt"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
-	// Import the abi-decoder package
-	kdx "github.com/w2496/go-abi-decoder"
-)
-
-func main() {
 	txHash := common.HexToHash("0x4f2316c83db20be4833c81f529f0eb51758ff14e4e455b4cbb203482053477f5")
 	client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com")
 
@@ -78,7 +64,7 @@ import (
 )
 
 func main() {
-		if client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com"); err == nil {
+	if client, err := ethclient.Dial("https://rpc-devnet-cardano-evm.c1.milkomeda.com"); err == nil {
 		kdx.SetClient(client)
 	} else {
 		panic(err)
