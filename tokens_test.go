@@ -8,7 +8,7 @@ import (
 
 func TestTokenStore(t *testing.T) {
 	addr := common.HexToAddress(EtherAddress)
-	TknStore.SetTknInfo(&ITknInfo{
+	TknStore.Set(&ITknInfo{
 		Address:   addr,
 		IsERC20:   false,
 		IsERC721:  false,
@@ -19,7 +19,7 @@ func TestTokenStore(t *testing.T) {
 		Meta:      "{}",
 	})
 
-	tkn, err := TknStore.GetTknInfo(addr)
+	tkn, err := TknStore.Get(addr)
 
 	if err != nil {
 		t.Fatal("error getting token info from store", err)
@@ -27,7 +27,7 @@ func TestTokenStore(t *testing.T) {
 
 	t.Log("Token loaded from TknStore", tkn.Name)
 
-	dec := tkn.GetDecoder()
+	dec := tkn.CreateDecoder()
 	if dec.Abi == nil {
 		t.Fatal("error get decoder - no abi loaded")
 	}
