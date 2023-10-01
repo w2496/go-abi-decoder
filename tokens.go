@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -23,6 +24,7 @@ type ITknInfo struct {
 
 type ITknStore struct {
 	data map[common.Address]*ITknInfo
+	abis map[common.Address]*abi.ABI
 }
 
 var TknStore = ITknStore{
@@ -41,18 +43,43 @@ func (store *ITknStore) Connect(nodeUrl string) {
 	Connect(nodeUrl)
 }
 
-func (store *ITknStore) HasTknInfo(address common.Address) bool {
+func (store *ITknStore) HasAbi(address common.Address) bool {
 	return store.data[address] != nil
 }
 
-func (store *ITknStore) SetTknInfo(nfo *ITknInfo) {
+func (store *ITknStore) SetAbi(tkn common.Address, abis abi.ABI) {
+	store.abis[tkn] = &abis
+}
+
+func (store *ITknStore) GetAbi(addr common.Address) *abi.ABI {
+	var result *abi.ABI
+	if store.HasAbi(addr) {
+		result = store.abis[addr]
+	} else if tkn, err := store.Get(addr); err == nil {
+		if tkn.IsERC20 {
+			*result = ParseABI(ALL_DEFAULT_ABIS[0])
+		} else if tkn.IsERC721 {
+			*result = ParseABI(ALL_DEFAULT_ABIS[1])
+		} else {
+			*result = MergeABIs(ALL_DEFAULT_ABIS[0], ALL_DEFAULT_ABIS[1])
+		}
+	}
+
+	return result
+}
+
+func (store *ITknStore) Has(address common.Address) bool {
+	return store.data[address] != nil
+}
+
+func (store *ITknStore) Set(nfo *ITknInfo) {
 	store.data[nfo.Address] = nfo
 }
 
-func (store *ITknStore) GetTknInfo(address common.Address) (*ITknInfo, error) {
+func (store *ITknStore) Get(address common.Address) (*ITknInfo, error) {
 	var result ITknInfo
 
-	if store.HasTknInfo(address) {
+	if store.Has(address) {
 		return store.data[address], nil
 	} else {
 		// Create a context with a timeout
@@ -71,46 +98,35 @@ func (store *ITknStore) BalanceOf(tkn common.Address, addr common.Address) (uint
 }
 
 func (store *ITknStore) GetDecoder(contract common.Address) (*AbiDecoder, error) {
-	if !store.HasTknInfo(contract) {
+	if !store.Has(contract) {
 		return nil, fmt.Errorf("can not create decoder, token not in store: %s", contract.Hex())
 	}
 
-	info, err := store.GetTknInfo(contract)
+	info, err := store.Get(contract)
 	if err != nil {
 		return nil, err
 	}
 
-	decoder := info.GetDecoder()
+	decoder := info.CreateDecoder()
 	return &decoder, err
 }
 
-func (tkn *ITknInfo) GetDecoder() AbiDecoder {
+func (tkn *ITknInfo) CreateDecoder() AbiDecoder {
 	var contractAddress string
 
 	if tkn.Address.Hex() != EtherAddress {
 		contractAddress = tkn.Address.Hex()
 	}
 
-	decoder := AbiDecoder{
+	return AbiDecoder{
 		ContractAddress: &contractAddress,
 		client:          TknStore.GetClient(),
+		Abi:             TknStore.GetAbi(tkn.Address),
 	}
-
-	merged := MergeABIs(ALL_DEFAULT_ABIS[0], ALL_DEFAULT_ABIS[1])
-
-	if tkn.IsERC20 {
-		decoder.SetABI(ParseABI(ALL_DEFAULT_ABIS[0]))
-	} else if tkn.IsERC721 {
-		decoder.SetABI(ParseABI(ALL_DEFAULT_ABIS[1]))
-	} else {
-		decoder.SetABI(merged)
-	}
-
-	return decoder
 }
 
 func (tkn *ITknInfo) Query() (*ITknInfo, error) {
-	return TknStore.GetTknInfo(tkn.Address)
+	return TknStore.Get(tkn.Address)
 }
 
 func (tkn *ITknInfo) GetName() *string {
