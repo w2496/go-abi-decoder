@@ -96,7 +96,12 @@ func (decoder *AbiDecoder) SetClient(client *ethclient.Client) {
 }
 
 func (decoder *AbiDecoder) GetClient() *ethclient.Client {
-	return decoder.client
+	client := decoder.client
+	if client == nil {
+		client = Ctx.eth
+	}
+
+	return client
 }
 
 func (decoder *AbiDecoder) RemoveClient() {
@@ -111,11 +116,12 @@ func (decoder *AbiDecoder) Reset() {
 }
 
 func (decoder *AbiDecoder) FilterLogEvents(filter ethereum.FilterQuery) (*ScannedLogs, error) {
-	if decoder.client == nil {
-		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
+	if decoder.client == nil && Ctx.eth == nil {
+		return nil, fmt.Errorf("no provider set for decoder nor set in CTX - contract: %v", decoder.ContractAddress)
 	}
 
-	logs, err := decoder.client.FilterLogs(context.Background(), filter)
+	client := decoder.GetClient()
+	logs, err := client.FilterLogs(context.Background(), filter)
 	if err != nil {
 		return nil, err
 	}
@@ -133,11 +139,15 @@ func (decoder *AbiDecoder) FilterLogEvents(filter ethereum.FilterQuery) (*Scanne
 }
 
 func (decoder *AbiDecoder) DecodeReceipt(transactionHash string) (*ScannedLogs, error) {
-	if decoder.client == nil {
-		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
+	if decoder.client == nil && Ctx.eth == nil {
+		return nil, fmt.Errorf("no provider set for decoder nor set in CTX - contract: %v", decoder.ContractAddress)
 	}
 
-	receipt, err := decoder.client.TransactionReceipt(context.Background(), common.HexToHash(transactionHash))
+	client := decoder.GetClient()
+	receipt, err := client.TransactionReceipt(
+		context.Background(), common.HexToHash(transactionHash),
+	)
+
 	if err != nil {
 		return nil, err
 	}
@@ -157,12 +167,13 @@ func (decoder *AbiDecoder) DecodeReceipt(transactionHash string) (*ScannedLogs, 
 }
 
 func (decoder *AbiDecoder) DecodeTransaction(transactionHash string) (*DecodedMethod, error) {
-	if decoder.client == nil {
-		return nil, fmt.Errorf("no provider set for decoder - contract: %v", decoder.ContractAddress)
+	if decoder.client == nil && Ctx.eth == nil {
+		return nil, fmt.Errorf("no provider set for decoder nor set in CTX - contract: %v", decoder.ContractAddress)
 	}
 
+	client := decoder.GetClient()
 	hash := common.HexToHash(transactionHash)
-	transaction, _, err := decoder.client.TransactionByHash(context.Background(), hash)
+	transaction, _, err := client.TransactionByHash(context.Background(), hash)
 	if err != nil {
 		return nil, err
 	}
