@@ -103,7 +103,7 @@ func TestDecodeMethod(t *testing.T) {
 
 	// // Add the ABI to the decoder
 	// decoder.SetABI(ParseABI(user_abi))
-	decoder.SetABI(all_abis_parsed)
+	decoder.SetABI(*all_abis_parsed)
 	transaction, _, err := decoder.client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestDecodeLogs(t *testing.T) {
 
 	// Create a new instance of the ABI decoder
 	decoder := AbiDecoder{
-		Abi:    &all_abis_parsed,
+		Abi:    all_abis_parsed,
 		client: Store.GetClient(),
 	}
 
@@ -150,7 +150,7 @@ func TestDecodeLogs(t *testing.T) {
 }
 
 func TestIndexedDecoder(t *testing.T) {
-	Store.SetIndexed(target_contract, ParseABI(ALL_DEFAULT_ABIS[12]), true, false, nil)
+	Store.SetIndexed(target_contract, *ParseABI(ALL_DEFAULT_ABIS[12]), true, false, nil)
 	s := Store.GetIndexed(target_contract)
 	t.Logf(`bytecode: %v - size: %v`, s.Bytecode, len(*s.Bytecode))
 
@@ -193,7 +193,7 @@ func TestSHA3(t *testing.T) {
 
 func TestScanLogs(t *testing.T) {
 	decoder := AbiDecoder{
-		Abi:             &all_abis_parsed,
+		Abi:             all_abis_parsed,
 		ContractAddress: &target_contract,
 	}
 
@@ -230,7 +230,7 @@ func TestScanLogs(t *testing.T) {
 
 func TestScanTransaction(t *testing.T) {
 	decoder := AbiDecoder{
-		Abi:             &all_abis_parsed,
+		Abi:             all_abis_parsed,
 		ContractAddress: &target_contract,
 	}
 
@@ -244,7 +244,7 @@ func TestScanTransaction(t *testing.T) {
 
 func TestERC20(t *testing.T) {
 	addr := "0x21540074Ac4c37da80BAC3E6674E10a2242fc2B4"
-	i := Store.SetIndexed(addr, ParseABI(abi_dao_token), false, true, nil)
+	i := Store.SetIndexed(addr, *ParseABI(abi_dao_token), false, true, nil)
 
 	decoder := i.GetDecoder()
 

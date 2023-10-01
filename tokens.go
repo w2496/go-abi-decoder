@@ -53,16 +53,19 @@ func (store *ITknStore) SetAbi(tkn common.Address, abis abi.ABI) {
 
 func (store *ITknStore) GetAbi(addr common.Address) *abi.ABI {
 	var result *abi.ABI
+
 	if store.HasAbi(addr) {
 		result = store.abis[addr]
 	} else if tkn, err := store.Get(addr); err == nil {
 		if tkn.IsERC20 {
-			*result = ParseABI(ALL_DEFAULT_ABIS[0])
+			result = ParseABI(ALL_DEFAULT_ABIS[0])
 		} else if tkn.IsERC721 {
-			*result = ParseABI(ALL_DEFAULT_ABIS[1])
-		} else {
-			*result = MergeABIs(ALL_DEFAULT_ABIS[0], ALL_DEFAULT_ABIS[1])
+			result = ParseABI(ALL_DEFAULT_ABIS[1])
 		}
+	}
+
+	if result == nil {
+		result = MergeABIs(ALL_DEFAULT_ABIS[0], ALL_DEFAULT_ABIS[1])
 	}
 
 	return result
@@ -118,10 +121,14 @@ func (tkn *ITknInfo) CreateDecoder() AbiDecoder {
 		contractAddress = tkn.Address.Hex()
 	}
 
+	abi := TknStore.GetAbi(tkn.Address)
+
+	fmt.Println("abi loaded", abi.Methods)
+
 	return AbiDecoder{
 		ContractAddress: &contractAddress,
 		client:          TknStore.GetClient(),
-		Abi:             TknStore.GetAbi(tkn.Address),
+		Abi:             abi,
 	}
 }
 
