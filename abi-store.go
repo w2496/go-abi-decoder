@@ -12,7 +12,6 @@ import (
 type Storage struct {
 	AbiList []abi.ABI              // global abi storage that holds all abis from `contracts` folder
 	Indexed map[string]*IndexedABI // indexed contracts are basically not thought for this application.
-	client  *ethclient.Client
 }
 
 // Store is a global variable of type Storage, holding all the ABIs and indexed contracts.
@@ -49,11 +48,10 @@ func (store *Storage) SetIndexed(address string, input abi.ABI, verified bool, i
 		Verified: verified,
 		IsToken:  isToken,
 		Bytecode: bytecode,
-		client:   store.client,
 	}
 
-	if bytecode == nil && store.client != nil {
-		result.Bytecode = getBytecode(store.client, common.HexToAddress(address))
+	if bytecode == nil && Ctx.eth != nil {
+		result.Bytecode = getBytecode(common.HexToAddress(address))
 	}
 
 	if bytecode != nil {
@@ -141,13 +139,9 @@ func (store *Storage) ParseAndAddABIs(abis ...string) {
 }
 
 func (store *Storage) SetClient(client *ethclient.Client) {
-	store.client = client
+	SetClient(client)
 }
 
 func (store *Storage) GetClient() *ethclient.Client {
-	return store.client
-}
-
-func (store *Storage) RemoveClient() {
-	store.client = nil
+	return GetClient()
 }
