@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"golang.org/x/exp/slices"
 )
 
@@ -254,8 +254,12 @@ func formatParameters(decoded map[string]interface{}, debug *bool) Params {
 	return decoded
 }
 
-func getBytecode(client *ethclient.Client, address common.Address) *string {
-	code, err := client.CodeAt(context.Background(), address, nil)
+func getBytecode(address common.Address) *string {
+	if Ctx.eth == nil {
+		return nil
+	}
+
+	code, err := Ctx.eth.CodeAt(context.Background(), address, nil)
 	if err != nil {
 		log.Fatal("error getting bytecode:", address, err)
 		zeroHex := "0x"
@@ -264,4 +268,146 @@ func getBytecode(client *ethclient.Client, address common.Address) *string {
 
 	res := strings.Join([]string{"0x", common.Bytes2Hex(code)}, "")
 	return &res
+}
+
+func clientRequired() error {
+	if Ctx.eth == nil && Ctx.connection == nil {
+		return fmt.Errorf("no client connected or connection string attached to decoder.Ctx.eth")
+	}
+
+	if Ctx.eth == nil && Ctx.connection != nil {
+		Connect(*Ctx.connection)
+	}
+
+	return nil
+}
+
+func getSymbol(ctx context.Context, contract common.Address) *string {
+	if err := clientRequired(); err != nil {
+		return nil
+	}
+
+	msg := ethereum.CallMsg{
+		To: &contract, Data: common.Hex2Bytes("95d89b41"),
+	}
+	symbol, err := Ctx.eth.CallContract(ctx, msg, nil)
+
+	if err != nil {
+		return nil
+	}
+
+	result := ToAscii(symbol)
+
+	return &result
+}
+
+func getName(ctx context.Context, contract common.Address) *string {
+	if err := clientRequired(); err != nil {
+		return nil
+	}
+
+	msg := ethereum.CallMsg{
+		To: &contract, Data: common.Hex2Bytes("06fdde03"),
+	}
+
+	name, err := Ctx.eth.CallContract(ctx, msg, nil)
+	if err != nil {
+		return nil
+	}
+
+	out0 := ToAscii(name)
+
+	return &out0
+}
+
+func getDecimals(ctx context.Context, contract common.Address) *uint8 {
+	if err := clientRequired(); err != nil {
+		return nil
+	}
+
+	msg := ethereum.CallMsg{
+		To: &contract, Data: common.Hex2Bytes("313ce567"),
+	}
+	decimals, err := Ctx.eth.CallContract(ctx, msg, nil)
+
+	if err != nil {
+		return nil
+	}
+
+	result := uint8(common.BytesToHash(decimals).Big().Uint64())
+	return &result
+}
+
+func getERC20Balance(ctx context.Context, address common.Address, contractAddress common.Address) (uint64, error) {
+	if err := clientRequired(); err != nil {
+		return 0, err
+	}
+
+	// Create an instance of the ERC-20 contract ABI
+	contractAbi, err := abi.JSON(strings.NewReader(ALL_DEFAULT_ABIS[0]))
+	if err != nil {
+		return 0, err
+	}
+
+	// Build a call data to get the balance of the address
+	data, err := contractAbi.Pack("balanceOf", address)
+	if err != nil {
+		return 0, err
+	}
+
+	msg := ethereum.CallMsg{
+		To:   &contractAddress,
+		Data: data,
+	}
+
+	// Perform the call to the ERC-20 contract
+	result, err := Ctx.eth.CallContract(ctx, msg, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	// Unpack the result to get the balance as a big.Int
+	var balance *big.Int
+	err = contractAbi.UnpackIntoInterface(&balance, "balanceOf", result)
+	if err != nil {
+		return 0, err
+	}
+
+	return balance.Uint64(), nil
+}
+
+func queryTokenInfo(ctx context.Context, address common.Address, bytecodes ...string) ITknInfo {
+	var code *string
+	if len(bytecodes) > 0 {
+		var byteSlice []string
+		for _, bc := range bytecodes {
+			byteSlice = append(byteSlice, strings.TrimPrefix(bc, "0x"))
+		}
+
+		joined := "0x" + strings.TrimPrefix(strings.Join(byteSlice, ""), "0x")
+		code = &joined
+
+	} else {
+		code = getBytecode(address)
+	}
+
+	symbol := getSymbol(ctx, address)
+	name := getName(ctx, address)
+	decimals := getDecimals(ctx, address)
+
+	isErc20 := IsERC20(*code)
+	isErc721 := IsERC721(*code)
+	isErc1155 := isErc20 && isErc721
+
+	result := ITknInfo{
+		Address:   address,
+		IsERC20:   isErc20,
+		IsERC721:  isErc721,
+		IsERC1155: isErc1155,
+		Name:      *name,
+		Symbol:    *symbol,
+		Decimals:  *decimals,
+		Meta:      "{}",
+	}
+	return result
 }
