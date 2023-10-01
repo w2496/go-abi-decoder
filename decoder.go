@@ -50,7 +50,7 @@ func (decoder *AbiDecoder) FromJSON(abis string) abi.ABI {
 }
 
 func (s *AbiDecoder) MergeAddABIs(abis ...string) abi.ABI {
-	*s.Abi = MergeABIs(abis...)
+	s.Abi = MergeABIs(abis...)
 	return *s.Abi
 }
 
