@@ -23,13 +23,13 @@ const (
 	TransferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 )
 
-func ParseABI(input string) abi.ABI {
+func ParseABI(input string) *abi.ABI {
 	contractAbi, err := abi.JSON(strings.NewReader(input))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return contractAbi
+	return &contractAbi
 }
 
 func ToAscii(input []byte) string {
@@ -48,7 +48,7 @@ func ToAscii(input []byte) string {
 	return string(out)
 }
 
-func MergeABIs(jsonAbis ...string) abi.ABI {
+func MergeABIs(jsonAbis ...string) *abi.ABI {
 	mergedABI := abi.ABI{
 		Methods: make(map[string]abi.Method),
 		Events:  make(map[string]abi.Event),
@@ -71,7 +71,7 @@ func MergeABIs(jsonAbis ...string) abi.ABI {
 		}
 	}
 
-	return mergedABI
+	return &mergedABI
 }
 
 func IsEIP1559(client *ethclient.Client, ctx_ context.Context) (*bool, error) {
