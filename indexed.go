@@ -21,7 +21,6 @@ type IndexedABI struct {
 	Name     *string        `json:"name,omitempty"`     // Name of the contract
 	Pragma   *string        `json:"pragma,omitempty"`   // Pragma Solidity Version of contract
 	Source   *string        `json:"source,omitempty"`   // Solidity source code of contract
-	client   *ethclient.Client
 }
 
 // ToJSONBytes returns the JSON-encoded byte array of the IndexedABI object.
@@ -37,8 +36,8 @@ func (data *IndexedABI) ToJSON() string {
 
 // ToJSON returns the JSON-encoded string of the IndexedABI object.
 func (data *IndexedABI) GetBytecode() *string {
-	if data.Bytecode == nil && data.client != nil {
-		data.Bytecode = getBytecode(data.client, data.Address)
+	if data.Bytecode == nil && Ctx.eth != nil {
+		data.Bytecode = getBytecode(data.Address)
 	}
 
 	return data.Bytecode
@@ -57,7 +56,7 @@ func (data *IndexedABI) GetDecoder() AbiDecoder {
 		ContractAddress: &contractAddress,
 		Abi:             &data.Abi,
 		IsVerified:      data.Verified,
-		client:          data.client,
+		client:          Ctx.eth,
 	}
 }
 
@@ -124,13 +123,14 @@ func (data *IndexedABI) ValidateBytecodes() *bool {
 }
 
 func (indexed *IndexedABI) SetClient(client *ethclient.Client) {
-	indexed.client = client
+	SetClient(client)
 }
 
 func (indexed *IndexedABI) GetClient() *ethclient.Client {
-	return indexed.client
+	return GetClient()
 }
 
 func (indexed *IndexedABI) RemoveClient() {
-	indexed.client = nil
+	Ctx.eth = nil
+	Ctx.connection = nil
 }
