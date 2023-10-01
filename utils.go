@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -181,4 +184,23 @@ func DetectBytecodes(bytecode string, signatures []string) bool {
 
 	// If all signatures were found without collisions and count matches, return true
 	return len(signatures) == found
+}
+
+func GetMinerAndNonce(block *types.Block) (miner string, nonce string) {
+	bytes, err := block.Header().MarshalJSON()
+	if err != nil {
+		log.Fatal(`error marshalling block json`)
+		return EtherAddress, "0x"
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		log.Fatal(`error marshalling block json`)
+		return EtherAddress, "0x"
+	}
+
+	minerAddress := common.HexToAddress(data["miner"].(string)).Hex()
+
+	return minerAddress, data["nonce"].(string)
 }
