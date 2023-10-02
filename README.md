@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	// Create a new instance of the ABI decoder
+	// Create a new instance of ABI decoder
 	decoder := kdx.AbiDecoder{
 		Abi: kdx.ParseABI(kdx.ALL_DEFAULT_ABIS[12]),
 	}
@@ -39,7 +39,7 @@ func main() {
 		fmt.Println(method.ToJSON())
 	}
 
-	// Decode an events
+	// Decode events
 	if receipt, err := client.TransactionReceipt(context.Background(), txHash); err == nil {
 		for _, event := range decoder.DecodeLogs(receipt.Logs) {
 			fmt.Println(event.ToJSON())
